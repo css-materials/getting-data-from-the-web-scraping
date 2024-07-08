@@ -57,22 +57,33 @@ html_elements(x = eisen, css = "a")
 
 Run the code and observe the output: 
 * Many elements on the same page have the same tag. So, if we search for all `a` tags, we likely get a lot of stuff, much of which we do not want.
-* We can be more precise... for example, we can find **only the element that contains the document's speaker: "Dwight D. Eisenhower"** by finding that element on the webpage, and modifing the above code accordingly
+* We can be more precise... for example, we can find **only the element that contains the document's speaker: "Dwight D. Eisenhower"** by finding that element on the webpage, and modifying the above code accordingly
 
 
 ### Find specific elements with `html_elements`
 
 To find a specific element, **we need to inspect the HTML of the website.** We can do so in two ways:
 
-1. **Directly**: by right clicking on the page and select "Inspect" (notice here we need the content of the specific `a` tag, which is nested under `<h3 class="diet-title">`).
+**1. Directly**: the workflow will vary according to the web browser you are using...
 
-2. Using the **SelectorGadget**: 
+Safari:
+* ensure the developer menu is enabled: open Safari > Settings > Advanced > Check the "Show Develop menu in menu bar" checkbox
+* go to the website, right click on it and select "Inspect Element"
+* on the search bar, there should be small target that you can use to select tags
+
+Chrome: 
+* go to the website, right click on it and select "Inspect" 
+* there should be a small box with an arrow icon that you can use to select tags 
+
+**2. Using the SelectorGadget**: 
 * [Click here](https://selectorgadget.com/) to install and watch a short video on how to use it
 * Once installed drag the SelectorGadget link into your web browser's bar
 * Navigate to a webpage and open the SelectorGadget bookmark
 * [Click here](https://rvest.tidyverse.org/articles/selectorgadget.html#use) for step-by-step instructions on how to use it
 
-Which method is best? Looking through the tag structure directly ensure you have a better understanding of what you trying to scrape; on the other hand, using the Selector Gadget can be more efficient, but sometimes the Selector cannot guess the CSS correctly. 
+Which method is best? Looking through the tag structure directly ensure you have a better understanding of what you trying to scrape; on the other hand, using the Selector Gadget can be more efficient, but sometimes the Selector cannot guess the HTML/CSS correctly. 
+
+**Remember, each webpage is different:** its HTML structure and tags cannot be determined in advance. This requires some knowledge of HTML, but most importantly it requires time and patience to identify which tags to use to scrape the data we want. In an ideal world, webpages are well made in that they rely on well-designed and clear HTML structure... in reality, this is not always the case!
 
 
 ### Find specific elements with `html_elements`
@@ -156,6 +167,17 @@ title
 
 ```
 
+Another way to get the title (without using the Selector). Notice I am spelling out the full path to the title as it appears in the website: the title is under a `div` tag with a `class` attribute that says "field-ds-doc-title")
+```{r}
+
+title <- html_elements(x = eisen, css = "div.field-ds-doc-title h1") %>%   # or just ".field-ds-doc-title"
+  html_text2()
+title
+```
+
+Which approach is better? The first method is shorter and simpler, but it might also retrieve other elements on the webpage that use the "h1" tag. The second method is longer but more precise, increasing the likelihood that it will uniquely identify the desired element, here, the title. I typically start with the simplest code and, if it doesn't work, I then add more details to refine it! Notice that there are other variations of code that might work.
+
+
 ### Text
 
 ```{r}
@@ -227,7 +249,7 @@ scrape_doc <- function(url) {
 
 ### Add a time sleep into the function 
 
-Use `Sys.sleep` pause for a few seconds between each information we scrape:
+Use `Sys.sleep` to pause for a few seconds between each information we scrape. Why? websites do not like to be scraped, and scrapers collect info very fast: slowing down your scaper is a good practice to be kind to the website you are scraping and to avoid getting blocked by it.
 
 ```{r}
 title <- html_elements(x = eisen, css = "h1") %>%
@@ -299,12 +321,14 @@ scrape_doc(url_2)
 
 ```
 
+
 ### What's next?
 
 **Challenge**: How could we further automate our scraper so we do not have to pass 4000+ URLs (that's the amount of URLs in `https://www.presidency.ucsb.edu/documents/app-categories/presidential/letters`) each time?
 
+Solution: write code to...
 * collect all URLs on that page, and store them in a list or character vector
-* notice each page has about 10 URLs, so we need to tell the scraper to turn page!
+* each page has about 10 URLs, your code should tell the scraper to turn page!
 * apply our `scrape_doc` function to the list of URLs, one at a time 
 
 
