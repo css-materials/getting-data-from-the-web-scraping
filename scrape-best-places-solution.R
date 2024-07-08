@@ -32,5 +32,5 @@ html_table(x = climate, header = TRUE, fill = TRUE)[[1]]
 ## or as a piped operation
 sterling_climate %>%
   html_elements(css = "table") %>%
-  nth(1) %>%
-  html_table(header = TRUE)
+  html_table(header = TRUE, fill = TRUE) %>%
+  .[[1]] # use. to refer to results of previous pipe
