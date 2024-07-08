@@ -9,7 +9,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-## `rvest`
+### `rvest`
 
 The R package `rvest` allows us to:
 
@@ -17,14 +17,14 @@ The R package `rvest` allows us to:
 2. Find the specific HTLM/CSS elements that we want from that webpage using HTML tags and attributes + CSS selectors
 
 
-## Our Example: Presidential statements
+### Our Example: Presidential statements
 
 We are going to scrape data from this URL: `https://www.presidency.ucsb.edu/documents/special-message-the-congress-relative-space-science-and-exploration`
 
 We start with the `read_html` function from `rvest` to call the URL, grab its HTML source code, and save it in object (point 1 above). Then, we use other `rvest` functions to scrape the data (point 2 above).
 
 
-## Load libraries
+### Load libraries
 
 ```{r}
 library(rvest)
@@ -47,7 +47,7 @@ This is not very informative. We can do better! How? `rvest` lets us find and gr
 by HTML tags and attributes + by CSS selectors
 
 
-### Find specific elements with `html_elements`
+### Find specific elements with `html_elements`: all `a` tags
 
 For example if we want to find **all `a` elements** in the HTML of our webpage, we use the `html_elements` function:
 
@@ -60,33 +60,36 @@ Run the code and observe the output:
 * We can be more precise... for example, we can find **only the element that contains the document's speaker: "Dwight D. Eisenhower"** by finding that element on the webpage, and modifying the above code accordingly
 
 
-### Find specific elements with `html_elements`
+###  Options to find and retrieve more specific elements
 
 To find a specific element, **we need to inspect the HTML of the website.** We can do so in two ways:
 
-**1. Directly**: the workflow will vary according to the web browser you are using...
+**OPTION 1. Directly**: the workflow will vary according to the web browser you are using...
 
 Safari:
+
 * ensure the developer menu is enabled: open Safari > Settings > Advanced > Check the "Show Develop menu in menu bar" checkbox
 * go to the website, right click on it and select "Inspect Element"
 * on the search bar, there should be small target that you can use to select tags
 
 Chrome: 
+
 * go to the website, right click on it and select "Inspect" 
 * there should be a small box with an arrow icon that you can use to select tags 
 
-**2. Using the SelectorGadget**: 
+**OPTION 2. Using the SelectorGadget**: follow these steps to install and use the SelectorGadget...
+
 * [Click here](https://selectorgadget.com/) to install and watch a short video on how to use it
 * Once installed drag the SelectorGadget link into your web browser's bar
 * Navigate to a webpage and open the SelectorGadget bookmark
 * [Click here](https://rvest.tidyverse.org/articles/selectorgadget.html#use) for step-by-step instructions on how to use it
 
-Which method is best? Looking through the tag structure directly ensure you have a better understanding of what you trying to scrape; on the other hand, using the Selector Gadget can be more efficient, but sometimes the Selector cannot guess the HTML/CSS correctly. 
+**Which option should you use?** Both! Examining the tag structure directly ensures you have a thorough understanding of what you are trying to scrape. On the other hand, using SelectorGadget can be more efficient, but it may not always correctly identify the HTML/CSS elements. In such cases, you will need to rely on the first option.
 
 **Remember, each webpage is different:** its HTML structure and tags cannot be determined in advance. This requires some knowledge of HTML, but most importantly it requires time and patience to identify which tags to use to scrape the data we want. In an ideal world, webpages are well made in that they rely on well-designed and clear HTML structure... in reality, this is not always the case!
 
 
-### Find specific elements with `html_elements`
+### Find specific elements with `html_elements`: speaker's name
 
 Finally, we are ready to find **only the element that contains the document's speaker: "Dwight D. Eisenhower".** We modify the previous code accordingly:
 
@@ -131,7 +134,7 @@ We can keep using `html_text2()` and `html_attr()` to select other things, such 
 * its text
 
 
-### Date of statement
+### Date
 
 As a string (character):
 
@@ -175,7 +178,9 @@ title <- html_elements(x = eisen, css = "div.field-ds-doc-title h1") %>%   # or 
 title
 ```
 
-Which approach is better? The first method is shorter and simpler, but it might also retrieve other elements on the webpage that use the "h1" tag. The second method is longer but more precise, increasing the likelihood that it will uniquely identify the desired element, here, the title. I typically start with the simplest code and, if it doesn't work, I then add more details to refine it! Notice that there are other variations of code that might work.
+Which approach is better? 
+
+The first method is shorter and simpler, but it might also retrieve other elements on the webpage that use the "h1" tag. The second method is longer but more precise, increasing the likelihood that it will uniquely identify the desired element, here, the title. I typically start with the simplest code and, if it doesn't work, I then add more details to refine it! Notice that there are other variations of code that might work.
 
 
 ### Text
@@ -190,7 +195,7 @@ text %>% str_sub(1, 1000)
 
 ```
  
-**Now we know how to extract, the speaker, date, title, and full text from this document!**
+**Now we know how to extract the following elements from this document: speaker, date, title, and full text!**
 
 
 ### Scale up using a function
@@ -249,13 +254,9 @@ scrape_doc <- function(url) {
 
 ### Add a time sleep into the function 
 
-Use `Sys.sleep` to pause for a few seconds between each information we scrape. Why? websites do not like to be scraped, and scrapers collect info very fast: slowing down your scaper is a good practice to be kind to the website you are scraping and to avoid getting blocked by it.
+Use `Sys.sleep` to pause for a few seconds between each information we scrape. Why? websites do not like to be scraped, and scrapers collect info very fast: slowing down your scraper is a good practice to be kind to the website you are scraping and avoid getting blocked by it.
 
-```{r}
-title <- html_elements(x = eisen, css = "h1") %>%
-  html_text2()
-```
-
+Technically you only need `Sys.sleep` when you send out a request for data to the website server. This is done in the `read_html()` function.
 
 ```{r}
 scrape_doc <- function(url) {
@@ -273,19 +274,15 @@ scrape_doc <- function(url) {
   # extract elements we want
   date <- html_elements(x = url_contents, css = ".date-display-single") %>%
     html_text2() %>% mdy()
-  Sys.sleep(2)
-  
+
   speaker <- html_elements(x = url_contents, css = ".diet-title a") %>%
     html_text2()
-  Sys.sleep(2)
   
   title <- html_elements(x = url_contents, css = "h1") %>%
     html_text2()
-  Sys.sleep(2)
   
   text <- html_elements(x = url_contents, css = "div.field-docs-content") %>%
     html_text2()
-  Sys.sleep(2)
   
   # store in a data frame and return it
   url_data <- tibble(
@@ -303,7 +300,7 @@ scrape_doc <- function(url) {
 Even better, you could add a random number of seconds, for example between 1 and 4 seconds: `Sys.sleep(runif(1, min = 1, max = 4))` this tells R to generate one random number, between 1 and 4.
 
 
-### Call the function to scrape documents from the our website
+### Call the function to scrape documents from the website
 
 ```{r}
 
@@ -324,12 +321,18 @@ scrape_doc(url_2)
 
 ### What's next?
 
-**Challenge**: How could we further automate our scraper so we do not have to pass 4000+ URLs (that's the amount of URLs in `https://www.presidency.ucsb.edu/documents/app-categories/presidential/letters`) each time?
+Here are two challenges that will improve the current scraper. Feel free to tackle them and reach out if you have questions!
 
-Solution: write code to...
-* collect all URLs on that page, and store them in a list or character vector
-* each page has about 10 URLs, your code should tell the scraper to turn page!
-* apply our `scrape_doc` function to the list of URLs, one at a time 
+**Challenge #1:** How can we further automate our scraper so that we do not have to manually pass over 4000 URLs each time? Why 4000 URLs? Because the initial URL that we need to use to gather all "presidential letters" is: `https://www.presidency.ucsb.edu/documents/app-categories/presidential/letters` and it contains the links to over 4000 letters, ordered from the most recent (2024) to the least recent (1797)!
+
+To tackle this challenge, you need to write code that:
+
+* starts from this initial page (`https://www.presidency.ucsb.edu/documents/app-categories/presidential/letters`), and collects all URLs in it, storing them in a list or character vector
+* then your code should tell the scraper to turn page, and collect all URLs in the second page, and keep going until it reaches the last page (remember there are 4000+ pages, and we should collect links from all of them!)
+* finally, your code should apply our `scrape_doc` function to the list of all 4000+ URLs, one at a time! 
 
 
+**Challenge #2**: If you complete Challenge #1, you should add error-handling statements to your code to manage potential issues you might encounter while scraping. This is because you will be sending over 4000+ requests for data (one per page), and some of these requests might fail. The most common issue is a page denying your data request, resulting in a "404 error."
+
+To tackle this challenge, you need to write code that uses conditional statements to send a request to the webpage you want to scrape; if denied, the code should raise an error message.
 
