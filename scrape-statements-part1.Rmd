@@ -1,0 +1,319 @@
+---
+title: "Practice scraping Presidential Statements - PART 1"
+author: Sabrina Nardin
+date: "`r lubridate::today()`"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### The `rvest` package
+
+The `rvest` package allows us to:
+
+1. Collect and read the HTML source code of a webpage
+2. Find the specific HTLM/CSS elements that we want from that webpage using HTML tags and attributes + CSS selectors
+
+```{r}
+library(rvest)
+library(tidyverse)
+library(lubridate)
+```
+
+
+### Our Example: Presidential Statements
+
+We are going to scrape data from this URL: `https://www.presidency.ucsb.edu/documents/special-message-the-congress-relative-space-science-and-exploration`
+
+Our logic:
+
+* We start by using the `read_html()` function from `rvest` to make a connection with the URL, grab its HTML source code, and save it into R (point 1 above)
+* Then, we use other `rvest` functions to scrape the data from it (point 2 above). Specifically we will be scraping: name, title, date, and text 
+
+
+### Get the page with `read_html()`
+
+```{r}
+url <- "https://www.presidency.ucsb.edu/documents/special-message-the-congress-relative-space-science-and-exploration"
+eisen <- read_html(x = url)
+eisen
+```
+
+
+### Find specific elements from the page with `html_elements()`
+
+#### Two methods
+
+OK, we stored the website into an R object. What's next? We can use other `rvest` functions to scrape the specific HTLM (tags and attributes) and CSS elements from that page.
+
+For example, if we want to find **all `a` elements** we use the `html_elements()` function:
+
+```{r}
+html_elements(x = eisen, css = "a")
+```
+
+Run the code and observe the output: 
+
+Many elements on the page share the same tag. Since our code retrieves all `a` tags, we are getting a lot of data but much of which is irrelevant. To be more precise, we can target only the element containing the document's speaker, "Dwight D. Eisenhower". We can do this by finding that specific element on the webpage and modifying the code above accordingly.
+
+To find a specific element, **we need to inspect the HTML of the website.** and we can do so in two ways:
+
+**METHOD 1. Directly**: the workflow will vary according to the web browser you are using...
+
+Safari:
+
+* ensure the developer menu is enabled: open Safari > Settings > Advanced > Check the "Show Develop menu in menu bar" checkbox
+* go to the website, right click on it and select "Inspect Element"
+* on the search bar, there should be small target that you can use to select tags
+
+Chrome: 
+
+* go to the website, right click on it and select "Inspect" 
+* there should be a small box with an arrow icon that you can use to select tags 
+
+**METHOD 2. Using the SelectorGadget**: follow these steps to install and use the SelectorGadget...
+
+* [Click here](https://selectorgadget.com/) to install and watch a short video on how to use it
+* Once installed drag the SelectorGadget link into your web browser's bar
+* Navigate to a webpage and open the SelectorGadget bookmark
+* [Click here](https://rvest.tidyverse.org/articles/selectorgadget.html#use) for step-by-step instructions on how to use it
+
+**Which option should you use?** Both! Examining the tag structure directly ensures you have a thorough understanding of what you are trying to scrape. On the other hand, using SelectorGadget can be more efficient, but it may not always correctly identify the HTML/CSS elements. In such cases, you will need to rely on the first option.
+
+**Remember, each webpage is different:** its HTML structure and tags cannot be determined in advance. This requires some knowledge of HTML, but most importantly it requires time and patience to identify which tags to use to scrape the data we want. In an ideal world, webpages are well made in that they rely on well-designed and clear HTML structure... in reality, this is not always the case!
+
+
+#### Name
+
+We are finally ready to write code to get **only the element that contains the document's speaker: "Dwight D. Eisenhower".**:
+
+```{r}
+html_elements(x = eisen, css = ".diet-title a")
+```
+
+Once we have identified the element(s) of interest, we often want to extract **additional info contained within them**, such as text or specific attributes. To do this, we can use the following `rvest` functions:
+
+* `html_text2()` to retrieve text content
+* `html_attr()` to retrieve HTML attributes values
+
+Get the text of elements with `html_text2()`
+```{r}
+name <- html_elements(eisen, ".diet-title a") %>% 
+  html_text2() 
+name
+```
+
+Get the attributes of elements with `html_attr()`
+```{r}
+speaker_link <- html_elements(eisen, ".diet-title a") %>% 
+  html_attr("href") # a is the tag, href is its attribute
+speaker_link
+```
+
+We can keep using `html_text2()` and `html_attr()` to retrieve other information from the webpage, such as:
+* the statement's date
+* its title
+* its text
+
+
+#### Date
+
+Display date as a string (e.g., character), which is is the default:
+```{r}
+date <- html_elements(x = eisen, css = ".date-display-single") %>%
+  html_text2()
+date
+```
+
+Display date an actual date (e.g., a double of class "Date"; we need `lubridate` library to do so):
+```{r}
+date <- html_elements(x = eisen, css = ".date-display-single") %>%
+  html_text2() %>%
+  mdy() # format the element text using lubridate
+
+date
+class(date)
+```
+
+
+#### Title
+
+```{r}
+title <- html_elements(x = eisen, css = "h1") %>%
+  html_text2()
+title
+```
+
+Another way to extract the title (without using the Selector):
+```{r}
+title <- html_elements(x = eisen, css = "div.field-ds-doc-title h1") %>%
+  html_text2()
+title
+
+# this code spells out the full path to the title as shown in the website: the title is under a `div` tag with a `class` attribute that says "field-ds-doc-title") in this case we could also write ".field-ds-doc-title"
+```
+
+Which approach is better? 
+
+The first method is shorter and simpler, but it might also retrieve other elements on the webpage that use the "h1" tag. The second method is longer but more precise, increasing the likelihood that it will uniquely identify the desired element, here, the title. I typically start with the simplest method and, if it doesn't work, I go to the second! Notice that there are other variations of code that might work.
+
+
+#### Text
+
+```{r}
+
+text <- html_elements(x = eisen, css = "div.field-docs-content") %>%
+  html_text2()
+
+# display only the first 1,000 characters
+text %>% str_sub(1, 1000) 
+
+```
+ 
+**Now we know how to extract the following elements from this document: speaker, date, title, and full text!**
+
+
+### Scale up using a function
+
+#### Write the function
+
+**Why are we doing through all this effort to scrape just one page?**
+
+Make a function called `scrape_docs` that:
+
+- Take an URL of an single webpage
+- Get the HTML of that page 
+- Scrapes it
+- Returns a data frame containing the document's
+    - Date
+    - Speaker Name
+    - Title
+    - Text
+    
+```{r, eval = FALSE}
+
+scrape_doc <- function(url) {
+  # Scrapes data from US presidential pages
+  # Args:
+    # url (string): one presidential page, like "https://www.presidency.ucsb.edu/documents/special-message-the-congress-relative-space-science-and-exploration"
+  # Returns:
+    # tibble: a tibble with the date, speaker, title, full text from input url
+
+  # get HTML page
+  url_contents <- read_html(x = url)
+  
+  # extract elements we want
+  date <- html_elements(x = url_contents, css = ".date-display-single") %>%
+    html_text2() %>% mdy()
+  
+  name <- html_elements(x = url_contents, css = ".diet-title a") %>%
+    html_text2()
+  
+  title <- html_elements(x = url_contents, css = "h1") %>%
+    html_text2()
+  
+  text <- html_elements(x = url_contents, css = "div.field-docs-content") %>%
+    html_text2()
+  
+  # store in a data frame and return it
+  url_data <- tibble(
+    date = date,
+    name = name,
+    title = title,
+    text = text
+  )
+  return(url_data)
+}
+```
+
+
+#### Call the function to scrape more documents from the website
+
+Now we can use this function on multiple URLs. Note that this approach assumes the URLs you're scraping have a consistent structure -- meaning the information you want to extract is stored under the same tags across pages. This is often the case and it is true in this example, but not always. To ensure your code will work, inspect a few URLs to confirm they follow the same structure before proceeding!
+
+```{r}
+# uncomment the code to run it
+
+#url_1 <- "https://www.presidency.ucsb.edu/documents/letter-t-keith-glennan-administrator-national-aeronautics-and-space-administration"
+
+#scrape_doc(url_1)
+
+```
+
+```{r}
+# uncomment the code to run it
+
+#url_2 <- "https://www.presidency.ucsb.edu/documents/letter-the-president-the-senate-and-the-speaker-the-house-representatives-proposing"
+
+#scrape_doc(url_2)
+
+```
+
+
+#### Add a time sleep to the function 
+
+Use `Sys.sleep` to pause for a few seconds before moving on to scraping another page. Why? websites do not like to be scraped, and scrapers collect info very fast, way faster than any human would. Slowing down your scraper is a good practice to be kind to the website you are scraping and to avoid getting blocked by it.
+
+Technically you only need `Sys.sleep` when you send out a request for data to the website server. This is done in the `read_html()` function, so we put the code to slow down our scraper right after that request.
+
+```{r}
+scrape_doc <- function(url) {
+  # Scrapes data from presidential pages pausing between requests
+  # Args:
+    # url (string): one presidential page 
+  # Returns:
+    # tibble: a tibble with the date, speaker, title, full text from input url
+
+  
+  # get HTML page
+  url_contents <- read_html(x = url)
+  Sys.sleep(2)
+  
+  # extract elements we want
+  date <- html_elements(x = url_contents, css = ".date-display-single") %>%
+    html_text2() %>% mdy()
+
+  name <- html_elements(x = url_contents, css = ".diet-title a") %>%
+    html_text2()
+  
+  title <- html_elements(x = url_contents, css = "h1") %>%
+    html_text2()
+  
+  text <- html_elements(x = url_contents, css = "div.field-docs-content") %>%
+    html_text2()
+  
+  # store in a data frame and return it
+  url_data <- tibble(
+    date = date,
+    name = name,
+    title = title,
+    text = text
+  )
+  
+  return(url_data)
+}
+
+```
+
+Even better, you could pause your scraper for a random number of seconds. For example if you want to pause between 1 and 4 seconds, replace the code above with `Sys.sleep(runif(1, min = 1, max = 4))`. This tells R to generate one random number between 1 and 4.
+
+
+### What's next? Challange!
+
+In this tutorial, we applied our function to scrape information from two pages (two presidential statements). If we want to scrape all pages (all presidential statements), how can we do this? There are over 4000 presidential statements, each with its own URL. How can we further automate our scraper so that we do not have to manually pass 4000+ URLs into our function each time? 
+
+To tackle this challenge, we first need to spend some time planning: explore the website to identify the best page to use as starting point and examine how that page is built. After some exploration of the website, I have determined that the best page to use as starting point in this example is the page that contains the links to all 4000+ statements, ordered from the most recent (2024) to the least recent (1797): `https://www.presidency.ucsb.edu/documents/app-categories/presidential/letters`
+
+Open that page and explore it: you should notice that it displays only 10 URLs at that time, but if you turn page. you can get additional 10 URLs, etc. until you access all 4000+ URLs 
+
+You code should:
+
+* Start with the initial page, collect all URLs from it, and store them in a list or character vector
+* Turn page and collect all URLs from the second page, and continue this process until the last page. Remember there are 4000+ pages, and we should collect links from all of them
+* Finally, your code should apply the `scrape_doc` function we defined above to each of all 4000+ URLs we collected, one by one
