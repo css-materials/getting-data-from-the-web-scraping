@@ -94,8 +94,7 @@ Chrome:
 We are finally ready to write code to get **only the element that contains the document's speaker: "Dwight D. Eisenhower".**:
 
 ```{r}
-
-
+html_elements(x = eisen, css = ".diet-title a")
 ```
 
 Once we have identified the element(s) of interest, we often want to extract **additional info contained within them**, such as text or specific attributes. To do this, we can use the following `rvest` functions:
@@ -105,14 +104,16 @@ Once we have identified the element(s) of interest, we often want to extract **a
 
 Get the text of elements with `html_text2()`
 ```{r}
-
-
+name <- html_elements(eisen, ".diet-title a") %>% 
+  html_text2() 
+name
 ```
 
 Get the attributes of elements with `html_attr()`
 ```{r}
-
-
+speaker_link <- html_elements(eisen, ".diet-title a") %>% 
+  html_attr("href") # a is the tag, href is its attribute
+speaker_link
 ```
 
 We can keep using `html_text2()` and `html_attr()` to retrieve other information from the webpage, such as:
@@ -125,28 +126,37 @@ We can keep using `html_text2()` and `html_attr()` to retrieve other information
 
 Display date as a string (e.g., character), which is is the default:
 ```{r}
-
-
+date <- html_elements(x = eisen, css = ".date-display-single") %>%
+  html_text2()
+date
 ```
 
 Display date an actual date (e.g., a double of class "Date"; we need `lubridate` library to do so):
 ```{r}
+date <- html_elements(x = eisen, css = ".date-display-single") %>%
+  html_text2() %>%
+  mdy() # format the element text using lubridate
 
-
+date
+class(date)
 ```
 
 
 #### Title
 
 ```{r}
-
-
+title <- html_elements(x = eisen, css = "h1") %>%
+  html_text2()
+title
 ```
 
 Another way to extract the title (without using the Selector):
 ```{r}
+title <- html_elements(x = eisen, css = "div.field-ds-doc-title h1") %>%
+  html_text2()
+title
 
-
+# this code spells out the full path to the title as shown in the website: the title is under a `div` tag with a `class` attribute that says "field-ds-doc-title") in this case we could also write ".field-ds-doc-title"
 ```
 
 Which approach is better? 
@@ -158,6 +168,11 @@ The first method is shorter and simpler, but it might also retrieve other elemen
 
 ```{r}
 
+text <- html_elements(x = eisen, css = "div.field-docs-content") %>%
+  html_text2()
+
+# display only the first 1,000 characters
+text %>% str_sub(1, 1000) 
 
 ```
  
@@ -190,8 +205,31 @@ scrape_doc <- function(url) {
   # Returns:
     # tibble: a tibble with the date, speaker, title, full text from input url
 
-  # YOUR CODE HERE
+  # get HTML page
+  url_contents <- read_html(x = url)
   
+  # extract elements we want
+  date <- html_elements(x = url_contents, css = ".date-display-single") %>%
+    html_text2() %>% mdy()
+  
+  name <- html_elements(x = url_contents, css = ".diet-title a") %>%
+    html_text2()
+  
+  title <- html_elements(x = url_contents, css = "h1") %>%
+    html_text2()
+  
+  text <- html_elements(x = url_contents, css = "div.field-docs-content") %>%
+    html_text2()
+  
+  # store in a data frame and return it
+  url_data <- tibble(
+    date = date,
+    name = name,
+    title = title,
+    text = text
+  )
+  return(url_data)
+}
 ```
 
 
@@ -225,7 +263,41 @@ Use `Sys.sleep` to pause for a few seconds before moving on to scraping another 
 Technically you only need `Sys.sleep` when you send out a request for data to the website server. This is done in the `read_html()` function, so we put the code to slow down our scraper right after that request.
 
 ```{r}
+scrape_doc <- function(url) {
+  # Scrapes data from presidential pages pausing between requests
+  # Args:
+    # url (string): one presidential page 
+  # Returns:
+    # tibble: a tibble with the date, speaker, title, full text from input url
 
+  
+  # get HTML page
+  url_contents <- read_html(x = url)
+  Sys.sleep(2)
+  
+  # extract elements we want
+  date <- html_elements(x = url_contents, css = ".date-display-single") %>%
+    html_text2() %>% mdy()
+
+  name <- html_elements(x = url_contents, css = ".diet-title a") %>%
+    html_text2()
+  
+  title <- html_elements(x = url_contents, css = "h1") %>%
+    html_text2()
+  
+  text <- html_elements(x = url_contents, css = "div.field-docs-content") %>%
+    html_text2()
+  
+  # store in a data frame and return it
+  url_data <- tibble(
+    date = date,
+    name = name,
+    title = title,
+    text = text
+  )
+  
+  return(url_data)
+}
 
 ```
 
